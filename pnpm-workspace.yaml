@@ -26,3 +26,16 @@ minimumReleaseAgeExclude:
   - '@goodandready/dsh-key-limits@0.2.19'
   - 'dsh-workbuddy-connect@0.7.9'
   - 'dsh-ops@0.3.0'
+
+# ── pnpm 12 的依赖 build script 闸门（v1.0.1 修复启动器安装失败）──────────────
+# pnpm 12 默认把「带 install/prepare 脚本但没被批准的依赖」当成错误直接退出：
+#   Error: ERR_PNPM_IGNORED_BUILDS / Ignored build scripts: @google/genai, protobufjs
+# 本包的来源链条是：dsh-workbuddy-connect → @earendil-works/pi-ai → @google/genai（prepare）
+#   → protobufjs（postinstall）。这两个脚本对运行时没有作用，本包不需要执行它们：
+#   · 显式登记为 ignored（记录我们的知情决定）
+#   · strictDepBuilds: false（关键：pnpm 12 里 onlyBuiltDependencies / ignoredBuiltDependencies
+#     都不再是放行开关，只有这个开关能把 ERR_PNPM_IGNORED_BUILDS 从「致命错误」降级为「跳过」）
+strictDepBuilds: false
+ignoredBuiltDependencies:
+  - '@google/genai'
+  - 'protobufjs'

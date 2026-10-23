@@ -82,6 +82,23 @@ Or import `better-deepseek-harness-vanilla-<version>.dspack` from the DSH launch
 > groups only appear after WorkBuddy (domestic or international) is installed and signed in. **Not installing it breaks
 > nothing** — the group simply hides. Note upstream has marked the package **deprecated** on npm; it works but will not be updated.
 
+## Install troubleshooting
+
+**Symptom**: the launcher reports "failed to install modpack dependencies", ending with
+`Error: ERR_PNPM_IGNORED_BUILDS / Ignored build scripts: @google/genai@2.21.0, protobufjs@7.6.6`,
+followed by a second failure `first lockfile install → ERR_PNPM_NO_LOCKFILE` (a knock-on effect of the first).
+
+**Cause**: pnpm 12 treats dependencies with `install`/`prepare` scripts that have not been approved as a **fatal error**.
+The chain here is `dsh-workbuddy-connect@0.7.9` → `@earendil-works/pi-ai@1.3.0` →
+`@google/genai@2.21.0` (`prepare`) → `protobufjs@7.6.6` (`postinstall`).
+
+**Fixed in v1.0.1**: `pnpm-workspace.yaml` now sets `strictDepBuilds: false` plus an `ignoredBuiltDependencies` list.
+Note that in pnpm 12 `onlyBuiltDependencies` / `ignoredBuiltDependencies` **on their own do not** clear the error (measured);
+only `strictDepBuilds` downgrades it from fatal to skipped.
+
+**These are harmless notices** (measured exit code 0): `Agent skills awaiting approval: @liustack/modlens, dsh-computer-use@…`,
+`deprecated dsh-workbuddy-connect@0.7.9`, `Issues with peer dependencies found`.
+
 ## The 50 bundled skills
 
 On install, `home/skills/` lands in `DSH_HOME/skills/`: design/frontend, motion, data analysis, coding, office documents,
@@ -133,6 +150,19 @@ This modpack is only a plugin combination and configuration; it does not contain
 Format specification: [DSH-PackForge](https://github.com/DSH-PackForge/DSH-PackForge).
 
 ## Changelog
+
+### v1.0.1 (2026-10-23) (stable release · install fix)
+
+- **Fixed the launcher install failure** (`ERR_PNPM_IGNORED_BUILDS`): pnpm 12 makes unapproved dependency build scripts fatal,
+  and this pack hits it through `dsh-workbuddy-connect` → `@earendil-works/pi-ai` → `@google/genai` (prepare) /
+  `protobufjs` (postinstall). `pnpm-workspace.yaml` now sets `strictDepBuilds: false` and
+  `ignoredBuiltDependencies: [@google/genai, protobufjs]`.
+- **Also fixes** the follow-up `ERR_PNPM_NO_LOCKFILE`: the lockfile is only written once the first step succeeds, which the
+  frozen install then reads.
+- **Measured**: a clean install of all 23 dependencies (including 3 git ones) succeeds in **1m07s**, and the subsequent
+  `pnpm install --frozen-lockfile` passes — matching the launcher's two-step flow.
+- **No content changes**: host, plugin versions, mounted/shelved split and the 50 skills are identical to v1.0.0; only the
+  install configuration was fixed.
 
 ### v1.0.0 (2026-10-23) (stable release)
 

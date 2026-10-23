@@ -81,6 +81,23 @@ dsh --profile better-deepseek-harness-vanilla
 > WorkBuddy（国内版或国际版均可）才会出现对应模型分组；**没装也不影响启动**，分组直接隐藏。
 > 注意该插件上游已在 npm 标记 **停止维护**（deprecated），仍可用但今后不再更新。
 
+## 安装失败排查
+
+**症状**：启动器报「安装整合包依赖失败」，日志末尾是
+`Error: ERR_PNPM_IGNORED_BUILDS / Ignored build scripts: @google/genai@2.21.0, protobufjs@7.6.6`，
+随后还有一条 `首次锁文件安装 → ERR_PNPM_NO_LOCKFILE`（第二步是第一步失败的连带结果）。
+
+**原因**：pnpm 12 默认把「带 `install`/`prepare` 脚本但未被批准的依赖」当作**致命错误**。
+本包的来源链条是 `dsh-workbuddy-connect@0.7.9` → `@earendil-works/pi-ai@1.3.0` →
+`@google/genai@2.21.0`（`prepare`）→ `protobufjs@7.6.6`（`postinstall`）。
+
+**v1.0.1 已修**：`pnpm-workspace.yaml` 增加了 `strictDepBuilds: false` + `ignoredBuiltDependencies`（见文件内注释）。
+注意 pnpm 12 里 `onlyBuiltDependencies` / `ignoredBuiltDependencies` **单独使用都不能**消除该错误（实测），
+只有 `strictDepBuilds` 能把「致命」降级为「跳过」。
+
+**这些是正常提示、不影响安装**（实测退出码 0）：`Agent skills awaiting approval: @liustack/modlens, dsh-computer-use@…`、
+`deprecated dsh-workbuddy-connect@0.7.9`、`Issues with peer dependencies found`。
+
 ## 自带的 50 个 skill
 
 安装时 `home/skills/` 会落入 `DSH_HOME/skills/`，开箱即用：设计/前端、动效、数据分析、代码开发、办公文档、
@@ -129,6 +146,15 @@ node docs/compat-check.cjs   # 已挂载 10/10 通过；暂屏蔽 13 个单列
 格式规范：[DSH-PackForge](https://github.com/DSH-PackForge/DSH-PackForge)。
 
 ## 更新日志
+
+### v1.0.1 (2026-10-23)（正式发行 · 安装修复）
+
+- **修复启动器安装失败**（`ERR_PNPM_IGNORED_BUILDS`）：pnpm 12 会把未批准的依赖 build script 当致命错误，
+  本包的 `dsh-workbuddy-connect` → `@earendil-works/pi-ai` → `@google/genai`（prepare）/ `protobufjs`（postinstall）
+  正好命中。`pnpm-workspace.yaml` 增加 `strictDepBuilds: false` 与 `ignoredBuiltDependencies: [@google/genai, protobufjs]`。
+- **连带修掉**第二步的 `ERR_PNPM_NO_LOCKFILE`：第一步安装成功后才会写出 `pnpm-lock.yaml`，frozen 安装才能过。
+- **实测**：23 个依赖（含 3 个 git）全新安装 **1m07s 成功**，随后 `pnpm install --frozen-lockfile` 通过（对应启动器两步流程）。
+- **零内容变更**：基座、插件版本、挂载/屏蔽划分、50 个 skill 与 v1.0.0 完全相同，只是安装配置修好。
 
 ### v1.0.0 (2026-10-23)（正式发行）
 
