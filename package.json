@@ -19,7 +19,6 @@
     "@mrweicodes/dsh-loop-guard": "1.0.8",
     "@modusensus/dsh-mneme": "0.8.13",
     "@liustack/modlens": "3.26.6",
-    "dsh-prompt": "0.3.0",
     "dsh-plugin-wallpaper-engine": "1.2.0",
     "@goodandready/dsh-key-limits": "0.2.19",
     "@tencent-connect/dsh-qqbot": "github:yukitakasama/dsh-qqbot#7e88006dff56447248301a282667ab7b63fd70f0",

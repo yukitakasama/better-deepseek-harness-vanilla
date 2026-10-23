@@ -30,6 +30,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import shutil
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -44,6 +47,92 @@ ENTRIES = [
     ("pnpm-workspace.yaml", "pnpm-workspace.yaml"),
     ("overrides/cordis.patch.yml", "overrides/cordis.patch.yml"),
 ]
+
+# ── 依赖审计：第三方插件不得硬依赖 @deepseek-ai/dsh-* 核心包 ──────────────────
+#
+# 为什么必须挡住（v1.0.2 的事故复盘，见 docs/release-notes-v1.0.2.md）：
+#   DSH 解析 bundle 是「两锚点」——**profile 的 node_modules 优先**，宿主安装目录兜底
+#   （dsh-app-boot: "Pnpm-managed entries in the profile's node_modules resolve first"）。
+#   于是任何一个依赖只要把核心包装进 profile，就会遮蔽宿主自带的同版本包；启动期兼容门禁
+#   按「profile 里那份」的版本判定，版本与宿主不一致就整行 disable，并连带一串 pending
+#   （v1.0.2 里是 storage-domain → workspace → workspace-controller →
+#   directoryPickerController，工作区与目录选择器全废）。
+#   v1.0.1 的元凶是暂屏蔽的 dsh-prompt@0.3.0 硬依赖 dsh-storage-domain@^0.2.0-rc.2；
+#   这类引用本该写成 peerDependency（由宿主提供），所以打包期直接判红。
+CORE_PACKAGE_PREFIX = "@deepseek-ai/dsh-"
+# 这些 spec 形态不查 registry（git / 本地 / workspace 协议）。
+UNQUERYABLE_SPEC_MARKERS = ("github:", "git+", "git:", "file:", "link:", "workspace:", "http")
+
+
+def dependency_specs(manifest: dict) -> list:
+    """Return (name, spec) pairs from the manifest's mirrored dependency map."""
+    deps = manifest.get("dependencies") or {}
+    return sorted((str(name), str(spec)) for name, spec in deps.items())
+
+
+def declared_dependencies(name: str, spec: str) -> tuple:
+    """Read one dependency's own dependencies map from the registry.
+
+    Returns (deps, error). The error is a human-readable reason when the map
+    cannot be read (offline, unknown package, timeout) so the caller can degrade
+    to a warning instead of failing a build that would otherwise be fine.
+    """
+    if any(spec.startswith(marker) for marker in UNQUERYABLE_SPEC_MARKERS):
+        return {}, None
+    npm = shutil.which("npm")
+    if npm is None:
+        return {}, "npm not found on PATH"
+    try:
+        proc = subprocess.run(
+            [npm, "view", name + "@" + spec, "dependencies", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        return {}, type(error).__name__ + ": " + str(error)
+    if proc.returncode != 0:
+        lines = (proc.stderr or "").strip().splitlines()
+        return {}, (lines[-1] if lines else "npm exit %d" % proc.returncode)
+    raw = (proc.stdout or "").strip()
+    if raw in ("", "{}", "undefined", "null"):
+        return {}, None
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as error:
+        return {}, "unparsable npm output: %s" % error
+    return (parsed if isinstance(parsed, dict) else {}), None
+
+
+def audit_core_shadowing(manifest: dict) -> list:
+    """Return one line per dependency that would shadow a host core package.
+
+    A dependency declaring an @deepseek-ai/dsh-* entry in its "dependencies"
+    (instead of "peerDependencies") makes pnpm place that core package in the
+    profile's node_modules, where it wins module resolution over the host's own
+    copy and can trip the startup compatibility gate.
+    """
+    violations = []
+    unverified = []
+    for name, spec in dependency_specs(manifest):
+        declared, error = declared_dependencies(name, spec)
+        if error is not None:
+            unverified.append(name + "@" + spec + ": " + error)
+            continue
+        core = {k: v for k, v in declared.items() if k.startswith(CORE_PACKAGE_PREFIX)}
+        if core:
+            pinned = ", ".join(k + "@" + v for k, v in sorted(core.items()))
+            violations.append(name + "@" + spec + " hard-depends on core package(s): " + pinned)
+    for line in unverified:
+        print("build-dspack: WARNING dependency audit skipped for " + line)
+    if unverified:
+        print(
+            "build-dspack: WARNING dependency audit was incomplete (registry "
+            "unreachable?) - the shadowing rule is unverified for the packages above."
+        )
+    return violations
+
 
 # Directory (relative to repo root) whose contents are shipped verbatim under
 # the same path inside the dspack. The launcher copies ``home/`` onto the
@@ -132,6 +221,23 @@ def main() -> int:
     here = Path(__file__).resolve().parent
     repo_root = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else here.parent
     out_dir = Path(sys.argv[2]).resolve() if len(sys.argv) > 2 else Path.cwd()
+
+    manifest = json.loads((repo_root / "manifest.json").read_text(encoding="utf-8"))
+    skip_audit = "--no-dep-audit" in sys.argv[3:] or os.environ.get("DSH_PACK_SKIP_DEP_AUDIT") == "1"
+    if skip_audit:
+        print("build-dspack: dependency audit skipped (--no-dep-audit / DSH_PACK_SKIP_DEP_AUDIT=1)")
+    else:
+        violations = audit_core_shadowing(manifest)
+        if violations:
+            raise SystemExit(
+                "build-dspack: refusing to pack - these dependencies put a core @deepseek-ai/dsh-*\n"
+                "package into the profile's node_modules, which shadows the host's own copy and can\n"
+                "disable a whole row at startup (see docs/release-notes-v1.0.2.md):\n"
+                + "\n".join("  - " + violation for violation in violations)
+                + "\nFix: drop the plugin, or have upstream move that reference to peerDependencies."
+                "\n     Do not paper over it with a pnpm override - that still leaves two copies of a core package."
+            )
+        print("build-dspack: dependency audit ok - no dependency shadows a core package")
 
     dspack_path, digest = build(repo_root, out_dir)
     size = dspack_path.stat().st_size

@@ -40,7 +40,7 @@ Plus the two official base bundles (`@deepseek-ai/dsh-base`, `@deepseek-ai/dsh-w
 and its settings plus `dsh-pet`'s settings render into the official `settings.section`. Those slots are provided by DSH itself,
 so this pack needs no patch for them.
 
-## Shelved (installed, not mounted): 13 plugins
+## Shelved (installed, not mounted): 12 plugins
 
 The criterion is identical to the codex edition: **if upstream has not explicitly declared 0.2.1-rc.2 support, it is not loaded**
 (to avoid a peer-gate rejection or a startup crash). They stay in `dependencies` (installed, re-enableable) but are not in `dsh.profile.bundles`:
@@ -55,11 +55,17 @@ The criterion is identical to the codex edition: **if upstream has not explicitl
 | `@mrweicodes/dsh-loop-guard` | 1.0.8 | Open-range coverage only |
 | `dsh-computer-use-win` | 0.2.3 | No `@deepseek-ai/dsh-*` peer at all → cannot confirm |
 | `dsh-computer-use` | fork `72f390a` | Peers are all `*`, no compat statement; upstream stopped 2026-09-15 |
-| `dsh-prompt` | 0.3.0 | Only `engines.dsh >=0.2.0-rc.2` range coverage |
 | `@liustack/modlens` | 3.26.6 | No peer / engines declaration at all → cannot confirm |
 | `dsh-effort-slider` | 1.3.1 | No compat statement at all; upstream stopped 2026-09-26 |
 | `dsh-agent-arena` | fork `25e2c55` | Upstream pins `0.2.0-rc.2` exactly → not adapted |
 | `@tencent-connect/dsh-qqbot` | fork `7e88006` | Range coverage only (`>=0.1.0-rc.6`) |
+
+**Note (v1.0.2 onward)**: `dsh-prompt@0.3.0` is now **removed from `dependencies` entirely** (no longer installed at all).
+It was not merely "range coverage": it hard-depends on the core package `@deepseek-ai/dsh-storage-domain@^0.2.0-rc.2`, which pnpm
+installs into the profile's `node_modules`, shadowing the host's own 0.2.1-rc.2 copy, tripping the compatibility gate into
+disabling the `storage-domain` row and taking the workspace API and the directory picker down with it
+(see the [v1.0.2 release notes](docs/release-notes-v1.0.2.md)). To re-enable it, upstream first has to turn that dependency
+into a peerDependency.
 
 **To re-enable**: add the package back to `package.json` → `dsh.profile.bundles`, delete the matching `disabled: true` in
 `overrides/cordis.patch.yml`, and enable one at a time.
@@ -119,7 +125,7 @@ DSH validates with `semver.satisfies(hostVersion, peerRange, { includePrerelease
 names `>=0.2.1-rc.x`.
 
 ```bash
-node docs/compat-check.cjs   # mounted 10/10 pass; 13 shelved reported separately
+node docs/compat-check.cjs   # mounted 10/10 pass; 12 shelved reported separately
 ```
 
 > Note: enumeration-style peers (the three MichengAI plugins, agent-teams, workbuddy) hard-code a whitelist of known RCs, so a
@@ -142,7 +148,7 @@ This modpack is only a plugin combination and configuration; it does not contain
 - [PC2005-cloud](https://github.com/PC2005-cloud/dsh-pet) (desk pet dsh-pet)
 - [corrinehu](https://github.com/corrinehu/dsh-workbuddy-connect) (WorkBuddy model access)
 - [citrolabs](https://github.com/citrolabs/ego-lite) (ego-lite / the `ego-browser` skill)
-- The respective authors of `dsh-cost-meter`, `dsh-context`, `@modusensus/dsh-mneme`, `@liustack/modlens`, `dsh-prompt`,
+- The respective authors of `dsh-cost-meter`, `dsh-context`, `@modusensus/dsh-mneme`, `@liustack/modlens`,
   `dsh-ops`, `dsh-client-ui-git-graph`, `@nanmicoder/dsh-agent-teams`, `dsh-plugin-subagent-director`, `@mrweicodes/dsh-loop-guard`,
   `@goodandready/*`, `dsh-plugin-wallpaper-engine`, `dsh-effort-slider`, `dsh-computer-use-win`
 - The `dsh-agent-arena` and `dsh-qqbot` git dependencies are forks maintained in this repository; feature copyright remains with upstream
@@ -150,6 +156,25 @@ This modpack is only a plugin combination and configuration; it does not contain
 Format specification: [DSH-PackForge](https://github.com/DSH-PackForge/DSH-PackForge).
 
 ## Changelog
+
+### v1.0.2 (2026-10-24) (pre-release · workspace / directory picker fix)
+
+- **Fixes `typert gateway: directoryPicker/pick: active Service "directoryPickerController" is unavailable`** when adding a
+  workspace on DSH 0.2.1-rc.2. In v1.0.1 the shelved `dsh-prompt@0.3.0` hard-depends on
+  `@deepseek-ai/dsh-storage-domain@^0.2.0-rc.2`, so pnpm installed that copy into the profile's `node_modules`. DSH resolves
+  bundle names profile-first with the installation as fallback, so the host's own 0.2.1-rc.2 copy was shadowed by 0.2.0-rc.2,
+  the compatibility gate disabled the whole `storage-domain` row, and the `workspace` / `workspace-controller` chain
+  (7 entries) stayed pending — taking the workspace API and the directory picker down with it.
+- **Fix**: drop `dsh-prompt` from `dependencies` (it was never mounted, so all it did was poison the resolution anchor);
+  shelved count 13 → **12**, `dependencies` 23 → **22**, and its `minimumReleaseAgeExclude` row removed from
+  `pnpm-workspace.yaml`.
+- **Regression guard**: `scripts/build-dspack.py` now audits dependencies at pack time — any dependency declaring a
+  `@deepseek-ai/dsh-*` hard dependency (it should be a peerDependency) fails the build instead of shipping.
+- **End-to-end verified**: A/B boot comparison on a throwaway profile (every `node_modules` entry junctioned to the installed
+  one). With the shadow present: `disabling profile plugin row "storage-domain"` plus `6–7 entries did not activate`;
+  without it: no gate warnings, zero pending entries, `storage-domain` / `workspace` / `workspace-controller` all active.
+- **No other content changes**: host, the 10 mounted plugin versions, the remaining 12 shelved plugins and the 50 skills are
+  identical to v1.0.1.
 
 ### v1.0.1 (2026-10-23) (stable release · install fix)
 

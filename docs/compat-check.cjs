@@ -54,7 +54,7 @@ function satisfies(version, range) {
   return compare(version, range) === 0; // 精确
 }
 
-// ---- 插件表（原版风格：挂载 10 个 / 暂屏蔽 13 个）----
+// ---- 插件表（原版风格：挂载 10 个 / 暂屏蔽 12 个；dsh-prompt 自 v1.0.2 起已从 dependencies 移除，不再列入）----
 // mounted: true  → 在 dsh.profile.bundles 里，参与门禁（任一 peer 不满足即视为会崩，CI 应红）
 // mounted: false → 已从 bundles 移出并「暂屏蔽」，此处仅记录其 peer 现状，不计入总判定
 const MOUNTED = {
@@ -253,11 +253,6 @@ const SHELVED = {
   "dsh-computer-use-win@0.2.3": {
     "mounted": false,
     "reason": "无任何 @deepseek-ai/dsh-* peer 声明 → 无法确认",
-    "peers": {}
-  },
-  "dsh-prompt@0.3.0": {
-    "mounted": false,
-    "reason": "engines.dsh >=0.2.0-rc.2 属范围覆盖（README 讨论过 DSH 0.2.1 兼容门，但未点名具体 rc）",
     "peers": {}
   },
   "@liustack/modlens@3.26.6": {

@@ -39,7 +39,7 @@
 **落点说明**：没有 codex-ui 之后，`dsh-cost-meter` 的余额卡片进官方侧栏底部（`sidebar.footer.action`），
 它与 `dsh-pet` 的设置分区进官方设置页（`settings.section`）—— 这些插槽由 DSH 官方提供，不需要本包做任何补丁。
 
-## 暂屏蔽（随包安装、不挂载）的 13 个
+## 暂屏蔽（随包安装、不挂载）的 12 个
 
 判据与 codex 版完全一致：**上游没有明确声明适配 DSH 0.2.1-rc.2 的，一律不加载**（避免兼容门禁拒装或启动崩溃）。
 它们仍在 `dependencies` 里（装着，随时可启用），只是不在 `dsh.profile.bundles`：
@@ -54,11 +54,15 @@
 | `@mrweicodes/dsh-loop-guard` | 1.0.8 | 仅开区间覆盖 |
 | `dsh-computer-use-win` | 0.2.3 | 无 `@deepseek-ai/dsh-*` peer → 无法确认 |
 | `dsh-computer-use` | fork `72f390a` | peer 全为 `*`，无 compat 声明，上游停更于 2026-09-15 |
-| `dsh-prompt` | 0.3.0 | 仅 `engines.dsh >=0.2.0-rc.2` 范围覆盖 |
 | `@liustack/modlens` | 3.26.6 | 无任何 peer / engines 声明 → 无法确认 |
 | `dsh-effort-slider` | 1.3.1 | 无任何兼容声明，上游 2026-09-26 后停更 |
 | `dsh-agent-arena` | fork `25e2c55` | 上游精确钉 `0.2.0-rc.2` → 未适配 |
 | `@tencent-connect/dsh-qqbot` | fork `7e88006` | 仅 `>=0.1.0-rc.6` 范围覆盖 |
+
+**注意（v1.0.2 起）**：`dsh-prompt@0.3.0` 已从 `dependencies` **彻底移除**（不再随包安装）。它不只是「范围覆盖」——它还硬依赖
+核心包 `@deepseek-ai/dsh-storage-domain@^0.2.0-rc.2`，会把 0.2.0-rc.2 的副本装进 profile 的 `node_modules`，
+进而遮蔽宿主自带的 0.2.1-rc.2 同名包，触发兼容门禁整行禁用 `storage-domain`，连带工作区 / 目录选择器全部失效
+（详见 [v1.0.2 发行说明](docs/release-notes-v1.0.2.md)）。要再启用它，先让上游把该依赖改成 peerDependency。
 
 **启用步骤**：把包名加回 `package.json` → `dsh.profile.bundles`，删掉 `overrides/cordis.patch.yml` 里对应的 `disabled: true`，
 一次只开一个再验证。
@@ -116,7 +120,7 @@ DSH 用 `semver.satisfies(宿主版本, peer范围, { includePrerelease: true })
 「明确声明适配」= `dsh.compatibility.dshReleases` 写了 rc.2、或 peer 精确枚举 rc.2、或 `engines.dsh` 点名 `>=0.2.1-rc.x`。
 
 ```bash
-node docs/compat-check.cjs   # 已挂载 10/10 通过；暂屏蔽 13 个单列
+node docs/compat-check.cjs   # 已挂载 10/10 通过；暂屏蔽 12 个单列
 ```
 
 > 提醒：精确枚举型 peer（MichengAI 三件套、agent-teams、workbuddy）写死的是已知 RC 白名单，宿主升到
@@ -138,7 +142,7 @@ node docs/compat-check.cjs   # 已挂载 10/10 通过；暂屏蔽 13 个单列
 - [PC2005-cloud](https://github.com/PC2005-cloud/dsh-pet)（桌宠 dsh-pet）
 - [corrinehu](https://github.com/corrinehu/dsh-workbuddy-connect)（WorkBuddy 模型接入）
 - [citrolabs](https://github.com/citrolabs/ego-lite)（ego-lite / `ego-browser` skill）
-- `dsh-cost-meter`、`dsh-context`、`@modusensus/dsh-mneme`、`@liustack/modlens`、`dsh-prompt`、`dsh-ops`、
+- `dsh-cost-meter`、`dsh-context`、`@modusensus/dsh-mneme`、`@liustack/modlens`、`dsh-ops`、
   `dsh-client-ui-git-graph`、`@nanmicoder/dsh-agent-teams`、`dsh-plugin-subagent-director`、`@mrweicodes/dsh-loop-guard`、
   `@goodandready/*`、`dsh-plugin-wallpaper-engine`、`dsh-effort-slider`、`dsh-computer-use-win` 等各作者
 - fork 依赖 `dsh-agent-arena`、`dsh-qqbot` 由本仓库维护分叉，功能版权归上游原作者
@@ -146,6 +150,22 @@ node docs/compat-check.cjs   # 已挂载 10/10 通过；暂屏蔽 13 个单列
 格式规范：[DSH-PackForge](https://github.com/DSH-PackForge/DSH-PackForge)。
 
 ## 更新日志
+
+### v1.0.2 (2026-10-24)（预发布 · 工作区/目录选择器修复）
+
+- **修复「添加工作区」报 `typert gateway: directoryPicker/pick: active Service "directoryPickerController" is unavailable`**：
+  v1.0.1 在 DSH 0.2.1-rc.2 上，暂屏蔽列表里的 `dsh-prompt@0.3.0` 硬依赖 `@deepseek-ai/dsh-storage-domain@^0.2.0-rc.2`，
+  pnpm 把它装进 profile 的 `node_modules`；DSH 解析 bundle 是「profile 的 node_modules 优先，宿主自带副本兜底」，
+  于是宿主的 0.2.1-rc.2 副本被 0.2.0-rc.2 遮蔽 → 兼容门禁把 `storage-domain` 行整行禁用 → `workspace` / `workspace-controller`
+  等 7 个条目 pending → 工作区 API 与目录选择器全不可用。
+- **修法**：把 `dsh-prompt` 从 `dependencies` 移除（它本就未挂载，装上只会污染解析锚点），暂屏蔽数 13 → **12**，
+  `dependencies` 23 → **22**；`pnpm-workspace.yaml` 同步删掉它的 `minimumReleaseAgeExclude` 条目。
+- **防回归**：`scripts/build-dspack.py` 新增打包期依赖审计 —— 任一依赖只要声明了 `@deepseek-ai/dsh-*` 硬依赖（应走 peerDependency）
+  就让构建失败，避免同类遮蔽再次随包发出。
+- **端到端验证**：用临时 profile（`node_modules` 全部 junction 到本机已装 profile）做 A/B 启动对比 ——
+  保留遮蔽：`disabling profile plugin row "storage-domain"` + `6~7 entries did not activate`；
+  去掉遮蔽：门禁无告警、pending 归零，`storage-domain` / `workspace` / `workspace-controller` 全部激活。
+- **零其他内容变更**：基座、10 个挂载插件版本、其余 12 个暂屏蔽插件、50 个 skill 与 v1.0.1 完全相同。
 
 ### v1.0.1 (2026-10-23)（正式发行 · 安装修复）
 
