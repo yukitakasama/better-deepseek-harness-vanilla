@@ -130,7 +130,7 @@ node docs/compat-check.cjs   # 已挂载 10/10 通过；暂屏蔽 13 个单列
 
 ## 更新日志
 
-### v1.0.0 (2026-10-23)（预发布 pre-release）
+### v1.0.0 (2026-10-23)（正式发行）
 
 - **首个版本**。内容 = `better-deepseek-harness-codex` **v3.0.0** 去掉 `@michengai/dsh-codex-ui`（1.1.47）：
   - 依赖 24 → **23**，bundles 26 → **12**（10 个插件 + 2 个官方基座）；

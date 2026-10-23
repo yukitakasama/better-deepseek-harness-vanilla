@@ -134,7 +134,7 @@ Format specification: [DSH-PackForge](https://github.com/DSH-PackForge/DSH-PackF
 
 ## Changelog
 
-### v1.0.0 (2026-10-23) (pre-release)
+### v1.0.0 (2026-10-23) (stable release)
 
 - **First release.** Content = `better-deepseek-harness-codex` **v3.0.0** minus `@michengai/dsh-codex-ui` (1.1.47):
   - dependencies 24 → **23**, bundles 26 → **12** (10 plugins + 2 official bases);

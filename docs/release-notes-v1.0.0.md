@@ -1,4 +1,4 @@
-# better-deepseek-harness-vanilla v1.0.0 发行说明（**预发布 pre-release**）
+# better-deepseek-harness-vanilla v1.0.0 发行说明
 
 > **原版风格**整合包：与 `better-deepseek-harness-codex` v3.0.0 同基座、同插件集，
 > **唯一差别是不装 `@michengai/dsh-codex-ui`** —— 界面完全走 DSH 官方实现。
@@ -88,4 +88,4 @@
 ## 发行资产
 
 `better-deepseek-harness-vanilla-1.0.0.dspack` 与同名 `.dspack.sha256`（64 字节十六进制，无换行）。
-GitHub Release 标记为 **Pre-release**；`docs/prerelease-versions.txt` 已登记 `1.0.0`。
+GitHub Release 为**正式发行**（Latest，非 pre-release）。
