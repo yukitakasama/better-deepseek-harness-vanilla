@@ -176,7 +176,7 @@
   # 已从 bundles 移除；此处改为无条件 disabled（原为「非 Windows 才 disabled」的平台守卫）。
   disabled: true
 
-# ── dsh-ops（T-Auto/dsh-ops 0.3.0）：默认值记录 + 平台守卫 ──────────────────
+# ── dsh-ops（本地 fork 0.4.1-dsh021.1）：默认值记录 + 平台守卫 ───────────────
 # 插件自带 bundle patch 已插入 4 行（shell / file / background 空操作桩 / ptc），
 # 本层不再 insert 任何行，只做两件事：
 #
@@ -189,15 +189,13 @@
 # hide-official 会遮蔽官方工具，三者都保持上游默认关闭，需要时按需开启。
 - id: dsh-ops-file
   name: dsh-ops/file
-  # v3.0.0：dsh-ops 上游未声明适配 0.2.1-rc.2 → 已屏蔽
-  disabled: true
+  # v1.0.3-pre.1：本地 fork 0.4.1-dsh021.1 已适配 0.2.1-rc.2 → 启用
   config:
     promptPolicy: true
     required: false
 - id: dsh-ops-shell
   name: dsh-ops/shell
-  # v3.0.0：同上，已屏蔽
-  disabled: true
+  # v1.0.3-pre.1：同上，已启用
   config:
     promptPolicy: true
     publishBashTool: true

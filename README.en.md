@@ -19,7 +19,7 @@ It is a sibling of [`better-deepseek-harness-codex`](https://github.com/yukitaka
 
 Both packs **can be installed side by side** (different profile names, fully independent) — switch styles by switching profiles.
 
-## What's inside (10 mounted plugins)
+## What's inside (11 mounted plugins)
 
 | Capability | Plugin | Version |
 |---|---|---|
@@ -33,21 +33,21 @@ Both packs **can be installed side by side** (different profile names, fully ind
 | Multi-agent teams | `@nanmicoder/dsh-agent-teams` | 0.1.26 |
 | Git branch graph | `@linxin666/dsh-client-ui-git-graph` | 0.4.8 |
 | WorkBuddy desktop model access (reuses the app sign-in; hides when signed out) | `dsh-workbuddy-connect` | 0.7.9 |
+| Native file / Bash tooling (`ops_*`, temporary local fork) | `dsh-ops` | 0.4.1-dsh021.1 |
 
-Plus the two official base bundles (`@deepseek-ai/dsh-base`, `@deepseek-ai/dsh-web-app`) — 12 bundles in total.
+Plus the two official base bundles (`@deepseek-ai/dsh-base`, `@deepseek-ai/dsh-web-app`) — 13 bundles in total.
 
 **Where things land**: without codex-ui, `dsh-cost-meter`'s balance card renders into the official `sidebar.footer.action`,
 and its settings plus `dsh-pet`'s settings render into the official `settings.section`. Those slots are provided by DSH itself,
 so this pack needs no patch for them.
 
-## Shelved (installed, not mounted): 12 plugins
+## Shelved (installed, not mounted): 11 plugins
 
 The criterion is identical to the codex edition: **if upstream has not explicitly declared 0.2.1-rc.2 support, it is not loaded**
 (to avoid a peer-gate rejection or a startup crash). They stay in `dependencies` (installed, re-enableable) but are not in `dsh.profile.bundles`:
 
 | Plugin | Pinned | Why shelved |
 |---|---|---|
-| `dsh-ops` | 0.3.0 | Range coverage only (`^0.2.0-rc.2`), rc.2 never named |
 | `@goodandready/dsh-context-lens` | 0.1.28 | Range coverage only (`^0.1.7-rc.2 \|\| ^0.2.0-rc.1`) |
 | `@goodandready/dsh-key-limits` | 0.2.19 | No `@deepseek-ai/dsh-*` peer at all → cannot confirm |
 | `dsh-plugin-wallpaper-engine` | 1.2.0 | Range coverage only (`>=0.2.0-rc.1`) |
@@ -125,8 +125,13 @@ DSH validates with `semver.satisfies(hostVersion, peerRange, { includePrerelease
 names `>=0.2.1-rc.x`.
 
 ```bash
-node docs/compat-check.cjs   # mounted 10/10 pass; 12 shelved reported separately
+node docs/compat-check.cjs   # mounted 11/11 pass; 11 shelved reported separately
 ```
+
+> `dsh-ops` is the only exception: upstream 0.4.1 only declares `^0.2.0-rc.2`, so this release temporarily mounts
+> the local fork `0.4.1-dsh021.1` (peer adds `^0.2.1-rc.2`, Rust worker unchanged with the upstream three-platform
+> payloads), verified with the 0.2.1-rc.2 host packages via typecheck / build / 127 suites. Switch back to the
+> official package once upstream names rc.2.
 
 > Note: enumeration-style peers (the three MichengAI plugins, agent-teams, workbuddy) hard-code a whitelist of known RCs, so a
 > host bump to `0.2.1-rc.3` disables those rows until upstream republishes.

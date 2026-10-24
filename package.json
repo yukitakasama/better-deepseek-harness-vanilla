@@ -23,7 +23,7 @@
     "@goodandready/dsh-key-limits": "0.2.19",
     "@tencent-connect/dsh-qqbot": "github:yukitakasama/dsh-qqbot#7e88006dff56447248301a282667ab7b63fd70f0",
     "dsh-workbuddy-connect": "0.7.9",
-    "dsh-ops": "0.3.0"
+    "dsh-ops": "https://github.com/yukitakasama/dsh-ops/releases/download/v0.4.1-dsh021.1/dsh-ops-0.4.1-dsh021.1.tgz"
   },
   "dsh": {
     "profile": {
@@ -39,7 +39,8 @@
         "@nanmicoder/dsh-agent-teams",
         "dsh-context",
         "dsh-plugin-subagent-director",
-        "dsh-workbuddy-connect"
+        "dsh-workbuddy-connect",
+        "dsh-ops"
       ]
     }
   }

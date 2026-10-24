@@ -54,7 +54,7 @@ function satisfies(version, range) {
   return compare(version, range) === 0; // 精确
 }
 
-// ---- 插件表（原版风格：挂载 10 个 / 暂屏蔽 12 个；dsh-prompt 自 v1.0.2 起已从 dependencies 移除，不再列入）----
+// ---- 插件表（原版风格：挂载 11 个 / 暂屏蔽 11 个；dsh-prompt 自 v1.0.2 起已从 dependencies 移除，不再列入）----
 // mounted: true  → 在 dsh.profile.bundles 里，参与门禁（任一 peer 不满足即视为会崩，CI 应红）
 // mounted: false → 已从 bundles 移出并「暂屏蔽」，此处仅记录其 peer 现状，不计入总判定
 const MOUNTED = {
@@ -199,17 +199,17 @@ const MOUNTED = {
       "@deepseek-ai/dsh-home-paths": "0.2.1-rc.2",
       "@deepseek-ai/dsh-host-webserver": "0.2.1-rc.2"
     }
+  },
+  "dsh-ops@0.4.1-dsh021.1": {
+    "mounted": true,
+    "declaration": "本地 fork（yukitakasama/dsh-ops tag v0.4.1-dsh021.1）：peer 追加 ^0.2.1-rc.2，并已用 0.2.1-rc.2 宿主包完成 typecheck / build / 127 套测试（125 通过、2 项本机环境性失败）",
+    "peers": {
+      "@deepseek-ai/dsh": "^0.2.0-rc.2 || ^0.2.1-rc.2"
+    }
   }
 };
 
 const SHELVED = {
-  "dsh-ops@0.3.0": {
-    "mounted": false,
-    "reason": "仅范围覆盖（peer @deepseek-ai/dsh ^0.2.0-rc.2），上游未点名 rc.2",
-    "peers": {
-      "@deepseek-ai/dsh": "^0.2.0-rc.2"
-    }
-  },
   "@goodandready/dsh-context-lens@0.1.28": {
     "mounted": false,
     "reason": "仅范围覆盖（^0.1.7-rc.2 || ^0.2.0-rc.1），上游未点名 rc.2",

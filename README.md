@@ -19,7 +19,7 @@
 
 两个包**可以并存在同一台机器上**（profile 名不同、互相独立），想切风格就切 profile。
 
-## 装什么（挂载 10 个插件）
+## 装什么（挂载 11 个插件）
 
 | 能力 | 插件 | 版本 |
 |---|---|---|
@@ -33,20 +33,20 @@
 | 多智能体团队协作 | `@nanmicoder/dsh-agent-teams` | 0.1.26 |
 | Git 分支图 | `@linxin666/dsh-client-ui-git-graph` | 0.4.8 |
 | WorkBuddy 桌面端模型接入（复用 App 登录态，未登录自动隐藏） | `dsh-workbuddy-connect` | 0.7.9 |
+| 原生文件 / Bash 工具集（`ops_*`，临时本地 fork 适配） | `dsh-ops` | 0.4.1-dsh021.1 |
 
-外加两个官方基座 bundle（`@deepseek-ai/dsh-base`、`@deepseek-ai/dsh-web-app`），bundles 共 12 行。
+外加两个官方基座 bundle（`@deepseek-ai/dsh-base`、`@deepseek-ai/dsh-web-app`），bundles 共 13 行。
 
 **落点说明**：没有 codex-ui 之后，`dsh-cost-meter` 的余额卡片进官方侧栏底部（`sidebar.footer.action`），
 它与 `dsh-pet` 的设置分区进官方设置页（`settings.section`）—— 这些插槽由 DSH 官方提供，不需要本包做任何补丁。
 
-## 暂屏蔽（随包安装、不挂载）的 12 个
+## 暂屏蔽（随包安装、不挂载）的 11 个
 
 判据与 codex 版完全一致：**上游没有明确声明适配 DSH 0.2.1-rc.2 的，一律不加载**（避免兼容门禁拒装或启动崩溃）。
 它们仍在 `dependencies` 里（装着，随时可启用），只是不在 `dsh.profile.bundles`：
 
 | 插件 | 钉版本 | 屏蔽原因 |
 |---|---|---|
-| `dsh-ops` | 0.3.0 | 仅 `^0.2.0-rc.2` 范围覆盖，未点名 rc.2 |
 | `@goodandready/dsh-context-lens` | 0.1.28 | 仅 `^0.1.7-rc.2 \|\| ^0.2.0-rc.1` 范围覆盖 |
 | `@goodandready/dsh-key-limits` | 0.2.19 | 无任何 `@deepseek-ai/dsh-*` peer → 无法确认 |
 | `dsh-plugin-wallpaper-engine` | 1.2.0 | 仅 `>=0.2.0-rc.1` 范围覆盖 |
@@ -120,8 +120,12 @@ DSH 用 `semver.satisfies(宿主版本, peer范围, { includePrerelease: true })
 「明确声明适配」= `dsh.compatibility.dshReleases` 写了 rc.2、或 peer 精确枚举 rc.2、或 `engines.dsh` 点名 `>=0.2.1-rc.x`。
 
 ```bash
-node docs/compat-check.cjs   # 已挂载 10/10 通过；暂屏蔽 12 个单列
+node docs/compat-check.cjs   # 已挂载 11/11 通过；暂屏蔽 11 个单列
 ```
+
+> `dsh-ops` 是唯一例外：上游 0.4.1 只声明 `^0.2.0-rc.2`，本版临时挂载本地 fork `0.4.1-dsh021.1`
+> （peer 追加 `^0.2.1-rc.2`，Rust worker 不改、保留上游三平台产物），并已用 0.2.1-rc.2 宿主包做过
+> typecheck / build / 127 套测试。上游点名适配 rc.2 后请改回官方包。
 
 > 提醒：精确枚举型 peer（MichengAI 三件套、agent-teams、workbuddy）写死的是已知 RC 白名单，宿主升到
 > `0.2.1-rc.3` 会被整行禁用，必须等上游重发。
