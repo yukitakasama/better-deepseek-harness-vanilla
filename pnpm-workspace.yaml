@@ -37,3 +37,17 @@ strictDepBuilds: false
 ignoredBuiltDependencies:
   - '@google/genai'
   - 'protobufjs'
+
+# ── dsh-ops 走包内 vendored fork（v1.0.3-pre.2 修复启动器安装失败）────────────
+# package.json 里写 `"dsh-ops": "link:./dsh-ops"`：
+#   · 安装时 `<profile>/dsh-ops` 还不存在，pnpm 只建一个指向它的 junction（打印一条
+#     WARN，不报错）；安装完成后 launcher 把 dspack 的 `overrides/` 覆盖到 profile 根，
+#     `overrides/dsh-ops/` 就落到 `<profile>/dsh-ops/`，junction 随即生效。
+#   · 产物本身是 fork 的 GitHub Release tgz，固定在 vendor/ 里（打包脚本校验 sha512），
+#     因此安装期不需要访问 github.com —— 这正是 pre.1 崩溃（0xc0000409）的原因。
+#   · 不要把它改回 https://github.com/...tgz 的 URL 依赖。
+#
+# 另外一个必须同步维护的点：`link:` 不会安装被链接包自己的 optionalDependencies，
+# 所以 dsh-ops 声明的 Windows bash 载荷 `@dsh-ops/bash-win32-x64@0.2.1` 必须写进
+# package.json / manifest.json 的 dependencies（从 registry.npmjs.org 拉取）。
+# 漏掉它不会报错，只会让 `ops_bash` 静默消失（resolveShells 报 declared but not installed）。

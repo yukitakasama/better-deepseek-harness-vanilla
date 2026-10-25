@@ -2,6 +2,7 @@
   "name": "dsh-profile-better-deepseek-harness-vanilla",
   "private": true,
   "dependencies": {
+    "@dsh-ops/bash-win32-x64": "0.2.1",
     "@goodandready/dsh-context-lens": "0.1.28",
     "dsh-cost-meter": "1.9.30",
     "@linxin666/dsh-client-ui-git-graph": "0.4.8",
@@ -23,7 +24,7 @@
     "@goodandready/dsh-key-limits": "0.2.19",
     "@tencent-connect/dsh-qqbot": "github:yukitakasama/dsh-qqbot#7e88006dff56447248301a282667ab7b63fd70f0",
     "dsh-workbuddy-connect": "0.7.9",
-    "dsh-ops": "https://github.com/yukitakasama/dsh-ops/releases/download/v0.4.1-dsh021.1/dsh-ops-0.4.1-dsh021.1.tgz"
+    "dsh-ops": "link:./dsh-ops"
   },
   "dsh": {
     "profile": {

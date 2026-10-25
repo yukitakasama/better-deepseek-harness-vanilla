@@ -33,7 +33,7 @@
 | 多智能体团队协作 | `@nanmicoder/dsh-agent-teams` | 0.1.26 |
 | Git 分支图 | `@linxin666/dsh-client-ui-git-graph` | 0.4.8 |
 | WorkBuddy 桌面端模型接入（复用 App 登录态，未登录自动隐藏） | `dsh-workbuddy-connect` | 0.7.9 |
-| 原生文件 / Bash 工具集（`ops_*`，临时本地 fork 适配） | `dsh-ops` | 0.4.1-dsh021.1 |
+| 原生文件 / Bash 工具集（`ops_*`，临时本地 fork，产物随包内置） | `dsh-ops` | 0.4.1-dsh021.1 |
 
 外加两个官方基座 bundle（`@deepseek-ai/dsh-base`、`@deepseek-ai/dsh-web-app`），bundles 共 13 行。
 
@@ -77,6 +77,12 @@ dsh --profile better-deepseek-harness-vanilla
 
 或由 DSH 启动器导入 `better-deepseek-harness-vanilla-<version>.dspack`。
 
+> **内置 dsh-ops**：`dsh-ops` 的 fork 产物已随包内置（`vendor/dsh-ops-0.4.1-dsh021.1.tgz`，
+> 打包时展开到 dspack 的 `overrides/dsh-ops/`，依赖写 `link:./dsh-ops`），安装期**不需要访问 GitHub**。
+> Windows 的 bash 载荷 `@dsh-ops/bash-win32-x64@0.2.1` 已提升为显式依赖（从 npm registry 拉取），
+> 否则 `link:` 不会安装被链接包的 optionalDependencies，`ops_bash` 会静默缺失。
+> 缘由见 [v1.0.3-pre.2 发行说明](docs/release-notes-v1.0.3-pre.2.md)。
+
 > **git 依赖**：本包仍有 3 个 git 依赖（`dsh-computer-use`、`dsh-agent-arena`、`@tencent-connect/dsh-qqbot`），
 > 安装时需要能访问 GitHub。它们都已暂屏蔽（不挂载）但仍留在 `dependencies` 里；若网络拉不动，
 > 可以把它们从 `package.json` 删掉，挂载集不受影响。
@@ -114,6 +120,15 @@ dsh --profile better-deepseek-harness-vanilla
 **第一次用之前要装 ego lite 本体**：macOS 可用 skill 自带的 `scripts/install.sh`；**Windows 没有安装脚本**，
 需到 <https://lite.ego.app/> 下载安装包，完成 onboarding 后 `ego-browser` 才会写进 PATH（只有之后新开的终端才认识）。
 
+**症状**：启动器日志只留下 `pnpm install（整合包） 失败（exit code: 0xc0000409）`，pnpm 一行输出都没有。
+
+**原因**：v1.0.3-pre.1 把 `dsh-ops` 写成了 GitHub Releases 的 tgz URL，pnpm 每次安装都必须直连
+`github.com`；TLS 被代理拦截时 Node 校验不了证书，进程异常终止，启动器只能记录退出码。
+
+**v1.0.3-pre.2 已修**：fork 产物随包内置，依赖改为 `link:./dsh-ops`，安装期不再访问 GitHub。
+遇到同样报错请确认加载的是 **pre.2 或更新**的 dspack。
+
+
 ## 兼容性判定
 
 DSH 用 `semver.satisfies(宿主版本, peer范围, { includePrerelease: true })` 校验；本包宿主版本 = `0.2.1-rc.2`。
@@ -125,7 +140,8 @@ node docs/compat-check.cjs   # 已挂载 11/11 通过；暂屏蔽 11 个单列
 
 > `dsh-ops` 是唯一例外：上游 0.4.1 只声明 `^0.2.0-rc.2`，本版临时挂载本地 fork `0.4.1-dsh021.1`
 > （peer 追加 `^0.2.1-rc.2`，Rust worker 不改、保留上游三平台产物），并已用 0.2.1-rc.2 宿主包做过
-> typecheck / build / 127 套测试。上游点名适配 rc.2 后请改回官方包。
+> typecheck / build / 127 套测试。产物自 v1.0.3-pre.2 起随包内置（`link:./dsh-ops`），安装期不访问 GitHub。
+> 上游点名适配 rc.2 后请改回官方包。
 
 > 提醒：精确枚举型 peer（MichengAI 三件套、agent-teams、workbuddy）写死的是已知 RC 白名单，宿主升到
 > `0.2.1-rc.3` 会被整行禁用，必须等上游重发。

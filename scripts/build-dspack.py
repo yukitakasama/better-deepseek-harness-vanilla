@@ -13,6 +13,11 @@ Produced artifacts (named ``<manifest.name>-<manifest.version>.<ext>``):
     - ``package.json``
     - ``pnpm-workspace.yaml``
     - ``overrides/cordis.patch.yml``
+    - ``overrides/dsh-ops/**``   (vendored from ``vendor/dsh-ops-*.tgz``;
+                                   the launcher copies ``overrides/`` onto the
+                                   profile root, so this lands at
+                                   ``<profile>/dsh-ops/`` where the profile's
+                                   ``"dsh-ops": "link:./dsh-ops"`` points)
     - ``home/skills/<name>/...``  (zero or more; each bundled skill ships
                                    under ``home/skills/`` so the launcher's
                                    import step copies it onto the DSH_HOME
@@ -28,12 +33,15 @@ OUT_DIR   = current working directory.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
+import io
 import json
 import os
 import shutil
 import subprocess
 import sys
+import tarfile
 import zipfile
 from pathlib import Path
 
@@ -47,6 +55,62 @@ ENTRIES = [
     ("pnpm-workspace.yaml", "pnpm-workspace.yaml"),
     ("overrides/cordis.patch.yml", "overrides/cordis.patch.yml"),
 ]
+
+# ── 内置 dsh-ops fork（v1.0.3-pre.2）──────────────────────────────────────────
+#
+# 为什么内置而不是 URL 依赖：
+#   v1.0.3-pre.1 把 dsh-ops 写成 GitHub Releases 的 tgz URL，pnpm 安装时必须
+#   直连 github.com。在 TLS 被代理拦截的机器上 Node 校验不了代理的根证书，
+#   pnpm 在下载这个「直接依赖」时一行日志都没输出就崩溃（启动器记为
+#   exit code 0xc0000409），整个整合包装不上。
+#   本版把发布产物作为不可变输入放进仓库 vendor/，打包时校验 sha512 后展开到
+#   dspack 的 overrides/dsh-ops/；launcher 安装完成后把 overrides/ 覆盖到 profile
+#   根，profile 的 package.json 用 link:./dsh-ops 指向它 —— 安装期不访问 GitHub。
+VENDOR_DIR = "vendor"
+DSH_OPS_TGZ = "dsh-ops-0.4.1-dsh021.1.tgz"
+# npm integrity（sha512, base64）——与 v1.0.3-pre.1 锁文件里的 dsh-ops 条目一致。
+DSH_OPS_SHA512 = (
+    "7oEJvHfswPLVdGyEnyOLJ+8Av9ixDniOeBZ6ut/dtDdrHqxk0xWC3foO0q8hPdcWruENdBc1B346Ju7DsrDyXQ=="
+)
+DSH_OPS_ARC_PREFIX = "overrides/dsh-ops"
+
+
+def collect_vendor_entries(repo_root: Path) -> list[tuple[str, bytes]]:
+    """Return (arcname, payload) for the vendored dsh-ops package tree.
+
+    The tgz is the immutable fork release asset. Its sha512 is pinned here so a
+    swapped or corrupted file fails the build instead of shipping silently.
+    The archive's ``package/`` prefix is stripped, so the launcher's
+    ``apply_overrides`` puts the tree at ``<profile>/dsh-ops/``.
+    """
+    tgz = repo_root / VENDOR_DIR / DSH_OPS_TGZ
+    if not tgz.is_file():
+        raise SystemExit(f"build-dspack: missing vendored package {tgz}")
+    data = tgz.read_bytes()
+    digest = base64.b64encode(hashlib.sha512(data).digest()).decode("ascii")
+    if digest != DSH_OPS_SHA512:
+        raise SystemExit(
+            f"build-dspack: sha512 mismatch for {tgz}\n"
+            f"  expected {DSH_OPS_SHA512}\n  actual   {digest}"
+        )
+    out: list[tuple[str, bytes]] = []
+    with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
+        for member in archive:
+            if not member.isfile():
+                continue
+            name = member.name
+            if not name.startswith("package/"):
+                raise SystemExit(f"build-dspack: unexpected entry in {tgz}: {name}")
+            rel = name[len("package/"):]
+            if not rel or Path(rel).is_absolute() or ".." in Path(rel).parts:
+                raise SystemExit(f"build-dspack: unsafe entry in {tgz}: {name}")
+            stream = archive.extractfile(member)
+            if stream is None:
+                raise SystemExit(f"build-dspack: unreadable entry in {tgz}: {name}")
+            out.append((f"{DSH_OPS_ARC_PREFIX}/{rel}", stream.read()))
+    if not out:
+        raise SystemExit(f"build-dspack: {tgz} contains no files")
+    return out
 
 # ── 依赖审计：第三方插件不得硬依赖 @deepseek-ai/dsh-* 核心包 ──────────────────
 #
@@ -200,14 +264,17 @@ def build(repo_root: Path, out_dir: Path) -> tuple[Path, str]:
     out_dir.mkdir(parents=True, exist_ok=True)
     dspack_path = out_dir / dspack_name
 
-    # Collect (and validate) home payload entries *before* touching the
-    # output files, so a nested-home rejection leaves no partial dspack.
+    # Collect (and validate) payload entries *before* touching the output
+    # files, so a nested-home or bad-vendor rejection leaves no partial dspack.
     home_entries = collect_home_entries(repo_root)
+    vendor_entries = collect_vendor_entries(repo_root)
 
     with zipfile.ZipFile(dspack_path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("dspack.json", DSPACK_JSON)
         for arcname, src in ENTRIES:
             zf.writestr(arcname, (repo_root / src).read_bytes())
+        for arcname, payload in vendor_entries:
+            zf.writestr(arcname, payload)
         for arcname, src in home_entries:
             zf.writestr(arcname, (repo_root / src).read_bytes())
 

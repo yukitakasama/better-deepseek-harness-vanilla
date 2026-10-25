@@ -33,7 +33,7 @@ Both packs **can be installed side by side** (different profile names, fully ind
 | Multi-agent teams | `@nanmicoder/dsh-agent-teams` | 0.1.26 |
 | Git branch graph | `@linxin666/dsh-client-ui-git-graph` | 0.4.8 |
 | WorkBuddy desktop model access (reuses the app sign-in; hides when signed out) | `dsh-workbuddy-connect` | 0.7.9 |
-| Native file / Bash tooling (`ops_*`, temporary local fork) | `dsh-ops` | 0.4.1-dsh021.1 |
+| Native file / Bash tooling (`ops_*`, temporary local fork, payload bundled in-pack) | `dsh-ops` | 0.4.1-dsh021.1 |
 
 Plus the two official base bundles (`@deepseek-ai/dsh-base`, `@deepseek-ai/dsh-web-app`) — 13 bundles in total.
 
@@ -80,6 +80,14 @@ dsh --profile better-deepseek-harness-vanilla
 
 Or import `better-deepseek-harness-vanilla-<version>.dspack` from the DSH launcher.
 
+> **Bundled dsh-ops**: the dsh-ops fork payload ships inside the pack
+> (`vendor/dsh-ops-0.4.1-dsh021.1.tgz`, expanded into the dspack's `overrides/dsh-ops/`, with the
+> dependency written as `link:./dsh-ops`), so installation **does not need GitHub**.
+> The Windows bash payload `@dsh-ops/bash-win32-x64@0.2.1` is now an explicit dependency (fetched from
+> the npm registry): `link:` does not install the linked package's optionalDependencies, so without it
+> `ops_bash` would silently go missing.
+> See the [v1.0.3-pre.2 release notes](docs/release-notes-v1.0.3-pre.2.md).
+
 > **Git dependencies**: the pack still carries 3 (`dsh-computer-use`, `dsh-agent-arena`, `@tencent-connect/dsh-qqbot`),
 > so installation requires access to GitHub. All three are shelved (not mounted) but remain in `dependencies`; if your
 > network cannot fetch them, delete them from `package.json` — the mounted set is unaffected.
@@ -118,6 +126,16 @@ plugin registers).
 **Install ego lite itself first**: macOS can use the skill's `scripts/install.sh`; **Windows has no install script** — download
 the installer from <https://lite.ego.app/>, finish onboarding, and only terminals opened afterwards will see `ego-browser`.
 
+**Symptom**: the launcher log only shows `pnpm install（整合包） failed (exit code: 0xc0000409)` and pnpm printed nothing.
+
+**Cause**: v1.0.3-pre.1 pinned `dsh-ops` to a GitHub Releases tgz URL, so every install had to reach
+`github.com`; when TLS is intercepted by a proxy Node cannot verify the certificate, the process aborts,
+and the launcher can only record the exit code.
+
+**Fixed in v1.0.3-pre.2**: the fork payload is vendored in-pack and the dependency is `link:./dsh-ops`,
+so installation never touches GitHub. Make sure you are installing **pre.2 or newer**.
+
+
 ## Compatibility criteria
 
 DSH validates with `semver.satisfies(hostVersion, peerRange, { includePrerelease: true })`; this pack's host is `0.2.1-rc.2`.
@@ -130,7 +148,8 @@ node docs/compat-check.cjs   # mounted 11/11 pass; 11 shelved reported separatel
 
 > `dsh-ops` is the only exception: upstream 0.4.1 only declares `^0.2.0-rc.2`, so this release temporarily mounts
 > the local fork `0.4.1-dsh021.1` (peer adds `^0.2.1-rc.2`, Rust worker unchanged with the upstream three-platform
-> payloads), verified with the 0.2.1-rc.2 host packages via typecheck / build / 127 suites. Switch back to the
+> payloads), verified with the 0.2.1-rc.2 host packages via typecheck / build / 127 suites. Since v1.0.3-pre.2 the
+> payload ships inside the pack (`link:./dsh-ops`), so installation does not touch GitHub. Switch back to the
 > official package once upstream names rc.2.
 
 > Note: enumeration-style peers (the three MichengAI plugins, agent-teams, workbuddy) hard-code a whitelist of known RCs, so a

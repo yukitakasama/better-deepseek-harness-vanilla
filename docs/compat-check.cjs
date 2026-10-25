@@ -202,7 +202,7 @@ const MOUNTED = {
   },
   "dsh-ops@0.4.1-dsh021.1": {
     "mounted": true,
-    "declaration": "本地 fork（yukitakasama/dsh-ops tag v0.4.1-dsh021.1）：peer 追加 ^0.2.1-rc.2，并已用 0.2.1-rc.2 宿主包完成 typecheck / build / 127 套测试（125 通过、2 项本机环境性失败）",
+    "declaration": "本地 fork（yukitakasama/dsh-ops tag v0.4.1-dsh021.1，产物自 v1.0.3-pre.2 起随包内置，依赖为 link:./dsh-ops）：peer 追加 ^0.2.1-rc.2，并已用 0.2.1-rc.2 宿主包完成 typecheck / build / 127 套测试（125 通过、2 项本机环境性失败）",
     "peers": {
       "@deepseek-ai/dsh": "^0.2.0-rc.2 || ^0.2.1-rc.2"
     }
