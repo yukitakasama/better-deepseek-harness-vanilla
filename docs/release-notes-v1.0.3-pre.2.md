@@ -21,7 +21,7 @@
 v1.0.3-pre.1 在启动器里导入会停在这一步：
 
 ```
-$ <launcher>	ools\pnpm.cmd install --no-frozen-lockfile --store-dir ... 
+$ <launcher>\tools\pnpm.cmd install --no-frozen-lockfile --store-dir ...
 error: pnpm install（整合包） 失败: $ ... pnpm.cmd install --no-frozen-lockfile ...
 ```
 
@@ -45,8 +45,8 @@ error: pnpm install（整合包） 失败: $ ... pnpm.cmd install --no-frozen-lo
   退出，于是只留下 `0xc0000409`。
 - 实测同一网络下 `registry.npmjs.org`、`codeload.github.com` 可达，因此不是「整台机器
   没网」，而是「GitHub 的 release 资产域名不可直连」。
-- 手动加 `NODE_OPTIONS=--use-system-ca` 后，pre.1 能完整装完 134 个包；但整合包无法
-  控制启动器传给 pnpm 的 Node 参数，所以只能在包这一侧消除该 URL 依赖。
+- 手动加 `NODE_OPTIONS=--use-system-ca` 后，pre.1 能完整装完（本次实测 132 个包）；但
+  整合包无法控制启动器传给 pnpm 的 Node 参数，所以只能在包这一侧消除该 URL 依赖。
 
 ## 修复方式
 
@@ -81,7 +81,7 @@ error: pnpm install（整合包） 失败: $ ... pnpm.cmd install --no-frozen-lo
 ## 已知限制 / 回退
 
 - dspack 体积增加约 7 MB（fork 的三平台 Rust worker 原样保留，未裁剪）。
-- Windows 首次安装会额外下载 `@dsh-ops/bash-win32-x64`（约 307 MB 解开后体积）；
+- Windows 首次安装会额外从 npm registry 拉取 `@dsh-ops/bash-win32-x64`（解开后约 300 MB）；
   这是 dsh-ops 用来提供 `ops_bash` 的钉版 bash（PortableGit），不是本包自己加的。
 - 仓库多一个 6.9 MB 的 `vendor/dsh-ops-0.4.1-dsh021.1.tgz`；升级 fork 时需同时更新
   tgz 与 `scripts/build-dspack.py` 里的 `DSH_OPS_SHA512`。
